@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    body {
+      background: #1e1e1e;
+      padding:0;
+      margin:0;
+    }
+    #canvas-container {
+      display: flex;
+      align-items: center;
+    }
+    #canvas {
+      cursor: pointer;
+    }
+  </style>
+  <script>
+    const tile_size = 40;
+
+    var bw = 400;
+    var bh = 400;
+    var p = 0;
+
+    var rect = null;
+    var previous = null;
+
+    const getCanvas = () => {
+      return document.getElementById("canvas");
+    }
+
+    const drawCanvasRect = (x, y) => {
+      var canvas = getCanvas();
+      var context = getCanvasContext();
+
+      if (previous) {
+        context.clearRect(...previous);
+
+        const prevX = previous[0];
+        const prevY = previous[1];
+
+        const oddTile = (prevX + prevY) % (tile_size * 2) == 0;
+        const oddFill = oddTile ? '#333' : '#fff';
+
+        context.beginPath();
+        context.fillStyle = oddFill;
+        context.fillRect(prevX, prevY, tile_size, tile_size);
+      }
+
+      context.beginPath();
+      context.fillStyle = "#ef5e22";
+      context.fillRect(x, y, tile_size, tile_size);
+
+      previous = [x, y, tile_size, tile_size];
+      rect = context;
+    }
+
+    const getGridData = () => {
+      return fetch('http://localhost:8080')
+        .then((response) => {
+          return response.json()
+        });
+    }
+
+    const getCanvasContext = () => {
+      var canvas = getCanvas();
+      var context = canvas.getContext("2d");
+
+      return context;
+    }
+
+    const snap = val => {
+      const snapBy = -(tile_size);
+
+      if (val > 0) {
+        return Math.ceil(val/snapBy) * snapBy;
+      } else if(val < 0) {
+        return Math.floor(val/snapBy) * snapBy;
+      } else {
+        return 0;
+      }
+    }
+
+    const throttle = (callback, limit) => {
+      var waiting = false;                     
+      return function () {                     
+          if (!waiting) {                      
+              callback.apply(this, arguments); 
+              waiting = true;                  
+              setTimeout(function () {         
+                  waiting = false;             
+              }, limit);
+          }
+      }
+  }
+
+    const handleCanvasHover = throttle((event) => {
+      var context = getCanvasContext();
+
+      drawCanvasRect(
+        snap(event.x),
+        snap(event.y)
+      );
+    }, 25);
+
+    const drawCanvas = () => {
+      var data = getGridData();
+
+      console.log(data);
+
+      var canvas = getCanvas();
+      var context = getCanvasContext();
+
+      for (var x = 0; x <= 12; x++) {
+        for (var y = 0; y <= 12; y++) {
+          let fill = '#fff'
+
+          if ((x+y) % 2 == 0) {
+            fill = '#333';
+          }
+          
+          context.beginPath();
+          context.fillStyle = fill;
+          context.fillRect(x * tile_size, y * tile_size, tile_size, tile_size);
+  
+        }
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      drawCanvas();
+
+      canvas.addEventListener('mousemove', handleCanvasHover);
+    });
+
+  </script>
+</head>
+<body>
+  <div id="canvas-container">
+    <canvas  id="canvas" width="400px" height="400px"></canvas>
+  </div>
+</body>
+</html>
